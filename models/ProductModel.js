@@ -21,6 +21,16 @@ const Products = db.define('products', {
             len: [3, 100]
         }
     },
+    category: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
+
+
+
     price: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -28,6 +38,7 @@ const Products = db.define('products', {
             notEmpty: true,
         }
     },
+
     userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
