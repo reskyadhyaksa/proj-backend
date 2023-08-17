@@ -28,9 +28,13 @@ const Products = db.define('products', {
             notEmpty: true,
         }
     },
-
-
-
+    image: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
     price: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -38,13 +42,64 @@ const Products = db.define('products', {
             notEmpty: true,
         }
     },
+    description: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+            len: [3, 400]
+        }
+    },
+    stock: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
+    isHot_deal: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
+    shopee_link: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
+    tokopedia_link: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
+    shopee_click: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
+    tokopedia_click: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
+    
 
     userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         validate: {
             notEmpty: true,
-            len: [3, 100]
         }
     }
 }, {
