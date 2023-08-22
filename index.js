@@ -7,6 +7,8 @@ import SequelizeStore from "connect-session-sequelize";
 import UserRoute from "./routes/UserRoute.js";
 import ProductRoute from "./routes/ProductRoute.js";
 import AuthRoute from "./routes/AuthRoute.js";
+import AnalyticsRoute from "./routes/AnalyticsRoute.js";
+
 dotenv.config();
 
 const app = express();
@@ -40,6 +42,7 @@ app.use(express.json())
 app.use(UserRoute);
 app.use(ProductRoute);
 app.use(AuthRoute);
+app.use(AnalyticsRoute)
 
 // store.sync();
 

@@ -20,8 +20,14 @@ export const getProducts = async (req, res) => {
                 attributes: ['uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
             });
         }
+        // Format the image paths in the response as an array of strings
+    const formattedProducts = products.map(product => ({
+        ...product.toJSON(),
+        image: product.image.split(',').map(path => path.replace(/\\/g, '\\'))
+    }));
 
-        res.status(200).json(products);
+        console.log(formattedProducts);
+        res.status(200).json(formattedProducts);
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch products" });
     }
@@ -52,10 +58,11 @@ export const searchProduct = async (req, res) => {
 };
 
 export const getProductById = async (req, res) => {
+    const productUuid = req.params.id;
     try {
         const product = await Products.findOne({
             where: {
-                uuid: req.params.id
+                uuid: productUuid
             },
             attributes: ['uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
         });
@@ -96,16 +103,25 @@ export const getProductBySlug = async (req, res) => {
 
 export const createProduct = async (req, res) => {
     const {
-        name, category, image, price, description, stock,
+        name, category, price, description, stock,
         shopee_link, tokopedia_link
     } = req.body;
     
     try {
+        // console.log(req.files);
+        // let arrayImagePaths = []
+        let imagePaths = req.files.map(file => file.path).join(',');
+        // arrayImagePaths = imagePaths.split(',')
+
+        // let imagePaths = req.files.map(file => `'${file.path}'`).join(', ');
+        // imagePaths = [imagePaths]
+        console.log(imagePaths);
+
         await Products.create({
             userId: req.userId,
             name,
             category,
-            image,
+            image: imagePaths,
             price,
             description,
             stock,
@@ -118,11 +134,13 @@ export const createProduct = async (req, res) => {
         
         res.status(201).json({ msg: "Product Created Successfully" });
     } catch (error) {
-        res.status(500).json({ error: "Failed to create product" });
+        res.status(500).json({msg: error.message});
     }
 };
 
 export const updateProduct = async (req, res) => {
+    const productUuid = req.params.id;
+
     const {
         name, category, image, price, description, stock,
         isHot_deal, shopee_link, tokopedia_link
@@ -131,7 +149,7 @@ export const updateProduct = async (req, res) => {
     try {
         const product = await Products.findOne({
             where: {
-                uuid: req.params.id
+                uuid: productUuid
             }
         });
         
@@ -158,10 +176,11 @@ export const updateProduct = async (req, res) => {
 };
 
 export const deleteProduct = async (req, res) => {
+    const productUuid = req.params.id;
     try {
         const product = await Products.findOne({
             where: {
-                uuid: req.params.id
+                uuid: productUuid
             }
         });
         
@@ -247,4 +266,48 @@ export const getMostViewedProducts = async (req, res) => {
     }
 };
 
+export const incrShopeeClick = async (req, res) => {
+    const productUuid = req.params.id;
 
+    try {
+        const product = await Products.findOne({
+            where: {
+                uuid: productUuid
+            }
+        });
+
+        if (!product) {
+            return res.status(404).json({ error: "Product not found" });
+        }
+
+        await product.increment("shopee_click");
+
+        res.status(200).json({ message: "Shopee click incremented" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to increment shopee click" });
+    }
+};
+
+export const incrTokopediaClick = async (req, res) => {
+    const productUuid = req.params.id;
+
+    try {
+        const product = await Products.findOne({
+            where: {
+                uuid: productUuid
+            }
+        });
+
+        if (!product) {
+            return res.status(404).json({ error: "Product not found" });
+        }
+
+        await product.increment("tokopedia_click");
+
+        res.status(200).json({ message: "Tokopedia click incremented" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to increment tokopedia click" });
+    }
+};
