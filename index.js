@@ -34,8 +34,8 @@ app.use(session({
 }))
 
 app.use(cors({
-    credentials: true,
-    origin: 'http://localhost:3000',
+    // credentials: true,
+    origin: 'http://127.0.0.1:5173'
 }))
 
 app.use(express.json())
@@ -43,6 +43,7 @@ app.use(UserRoute);
 app.use(ProductRoute);
 app.use(AuthRoute);
 app.use(AnalyticsRoute)
+app.use(express.static("public"))
 
 // store.sync();
 
