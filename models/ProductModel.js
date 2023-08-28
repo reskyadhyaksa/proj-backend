@@ -79,6 +79,13 @@ const Products = db.define('products', {
             notEmpty: true,
         }
     },
+    count_view: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+        }
+    },
     shopee_click: {
         type: DataTypes.INTEGER,
         allowNull: false,

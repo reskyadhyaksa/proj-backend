@@ -1,6 +1,30 @@
 import Products from "../models/ProductModel.js";
 import Analytics from "../models/AnalyticsModel.js"
 
+export const trackWebVisitors = async (req, res) => {
+    const currentDate = new Date();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+
+    try {
+        const [AnalyticsData, created] = await Analytics.findOrCreate({
+            where: { month, year },
+            defaults: { month, year }
+        });
+
+        if (!created) {
+            await Analytics.increment('web_visitors', {
+                where: { month, year }
+            });
+        }
+
+        res.status(200).json({ msg: "Web visitors successfully incremented" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: "Failed to increment web visitors" });
+    }
+};
+
 export const getWebVistors =  async (req, res) => {
     const currentYear = new Date().getFullYear();
 

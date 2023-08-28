@@ -8,33 +8,35 @@ import {
     deleteProduct,
     searchProduct,
     getProductByPrice,
+    getBestSellerProducts,
     getHotDealProducts,
     getNewCollectionProducts,
     getMostViewedProducts,
     incrShopeeClick,
     incrTokopediaClick
+
 } from "../controllers/Products.js";
 
 import { VerifyUser } from "../middleware/AuthUser.js";
-import Upload from "../middleware/multerConfig.js";
-import { trackWebVisitors } from "../middleware/TrackVisitors.js";
+import upload from "../middleware/multerConfig.js";
 
 const router = express.Router();
 
-router.get("/products", trackWebVisitors, getProducts);
-router.get("/products/search", searchProduct);
-router.get("/products/id/:id", getProductById);
-router.get("/products/:slug", getProductBySlug);
-router.post("/products", VerifyUser, Upload.array('image', 5), createProduct);
-router.patch("/products/:id", VerifyUser, updateProduct);
-router.delete("/products/:id", VerifyUser, deleteProduct);
+router.get("/product", getProducts);
+router.get("/product/search", searchProduct);
+router.get("/product/info/:id", getProductById);
+router.get("/product/slug/:slug", getProductBySlug);
+router.post("/product", VerifyUser ,upload.array('images', 10), createProduct);
+router.patch("/product/:id/edit", VerifyUser, upload.array('images', 10), updateProduct);
+router.delete("/product/:id/delete", VerifyUser, deleteProduct);
 
-router.get("/products/price", getProductByPrice);
-router.get("/products/hot-deal", getHotDealProducts);
-router.get("/products/new-collection", getNewCollectionProducts);
-router.get("/products/most-viewed", getMostViewedProducts);
+router.get("/product/search/price", getProductByPrice);
+router.get("/product/best-seller", getBestSellerProducts);
+router.get("/product/hot-deal", getHotDealProducts);
+router.get("/product/new-collection", getNewCollectionProducts);
+router.get("/product/most-viewed", getMostViewedProducts);
 
-router.post("/products/clicks/shopee/:id", incrShopeeClick );
-router.post("/products/clicks/tokopedia/:id", incrTokopediaClick);
+router.post("/product/link/shopee/:id", incrShopeeClick );
+router.post("/product/link/tokopedia/:id", incrTokopediaClick);
 
 export default router;
