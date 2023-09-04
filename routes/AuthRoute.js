@@ -7,8 +7,8 @@ import {
 
 const router = express.Router();
 
-router.post("/login", LogIn)
-router.get("/me", Me)
-router.delete("/logout", LogOut)
+router.post("/api/login", LogIn)
+router.get("/api/me", Me)
+router.delete("/api/logout", LogOut)
 
 export default router;

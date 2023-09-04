@@ -80,7 +80,7 @@ const Products = db.define('products', {
         }
     },
     count_view: {
-        type: DataTypes.STRING,
+        type: DataTypes.INTEGER,
         allowNull: false,
         validate: {
             notEmpty: true,

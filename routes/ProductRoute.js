@@ -1,20 +1,19 @@
 import express from "express";
 import {
+    getAllProducts,
     getProducts,
-    getProductById,
-    getProductBySlug,
+    getSingleProduct,
     createProduct,
     updateProduct,
-    deleteProduct,
-    searchProduct,
-    getProductByPrice,
+    deleteProduct, 
+    updateHotDeal,
     getBestSellerProducts,
     getHotDealProducts,
     getNewCollectionProducts,
     getMostViewedProducts,
     incrShopeeClick,
-    incrTokopediaClick
-
+    incrTokopediaClick,
+    getSimilarProduct
 } from "../controllers/Products.js";
 
 import { VerifyUser } from "../middleware/AuthUser.js";
@@ -22,21 +21,21 @@ import upload from "../middleware/multerConfig.js";
 
 const router = express.Router();
 
-router.get("/product", getProducts);
-router.get("/product/search", searchProduct);
-router.get("/product/info/:id", getProductById);
-router.get("/product/slug/:slug", getProductBySlug);
-router.post("/product", VerifyUser ,upload.array('images', 10), createProduct);
-router.patch("/product/:id/edit", VerifyUser, upload.array('images', 10), updateProduct);
-router.delete("/product/:id/delete", VerifyUser, deleteProduct);
+router.get("/api/products", getProducts);
+router.get("/api/products/all", getAllProducts);
+router.get("/api/products/info", getSingleProduct);
+router.get("/api/products/similar-product", getSimilarProduct);
+router.post("/api/products", VerifyUser, upload.array('images', 10), createProduct);
+router.patch("/api/products", VerifyUser, upload.array('images', 10), updateProduct);
+router.delete("/api/products", VerifyUser, deleteProduct);
+router.patch("/api/products/edit-hot-deal", VerifyUser, updateHotDeal);
 
-router.get("/product/search/price", getProductByPrice);
-router.get("/product/best-seller", getBestSellerProducts);
-router.get("/product/hot-deal", getHotDealProducts);
-router.get("/product/new-collection", getNewCollectionProducts);
-router.get("/product/most-viewed", getMostViewedProducts);
+router.get("/api/products/best-seller", getBestSellerProducts);
+router.get("/api/products/hot-deal", getHotDealProducts);
+router.get("/api/products/new-collection", getNewCollectionProducts);
+router.get("/api/products/most-viewed", getMostViewedProducts);
 
-router.post("/product/link/shopee/:id", incrShopeeClick );
-router.post("/product/link/tokopedia/:id", incrTokopediaClick);
+router.post("/api/products/shopee-link/:productId", incrShopeeClick);
+router.post("/api/products/tokopedia-link/:productId", incrTokopediaClick);
 
 export default router;
