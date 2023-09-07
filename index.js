@@ -4,10 +4,11 @@ import session, { Session } from "express-session";
 import dotenv from "dotenv";
 import db from "./config/Database.js";
 import SequelizeStore from "connect-session-sequelize";
+import AuthRoute from "./routes/AuthRoute.js";
 import UserRoute from "./routes/UserRoute.js";
 import ProductRoute from "./routes/ProductRoute.js";
-import AuthRoute from "./routes/AuthRoute.js";
 import AnalyticsRoute from "./routes/AnalyticsRoute.js";
+
 
 dotenv.config();
 
@@ -34,14 +35,14 @@ app.use(session({
 }))
 
 app.use(cors({
-    // credentials: true,
+    credentials: true,
     origin: 'http://127.0.0.1:5173'
 }))
 
 app.use(express.json())
+app.use(AuthRoute);
 app.use(UserRoute);
 app.use(ProductRoute);
-app.use(AuthRoute);
 app.use(AnalyticsRoute)
 app.use(express.static("public"))
 

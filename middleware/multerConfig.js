@@ -31,17 +31,13 @@ const fileFilter = (req, file, cb) => {
         return cb(null, false);
     }
 
-    // if (fileSize > 25000000) {
-    //     req.fileValidationError = { message: 'Images must be less than 25 MB' };
-    //     return cb(null, false);
-    // }
-
     cb(null, true);
 };
 
 const upload = multer({
     storage: fileStorage, 
     fileFilter: fileFilter, 
+    limits: { fieldSize: 25 * 1024 * 1024 }
 });
 
 export default upload;

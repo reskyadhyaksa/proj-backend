@@ -1,130 +1,281 @@
 import Products from "../models/ProductModel.js";
+import ProductAnalytics from "../models/ProductAnalyticsModel.js"
 import { Sequelize } from 'sequelize';
 import { Op } from "sequelize";
+import querystring from 'querystring';
 import fs from "fs";
 
-export const getProducts = async (req, res) => {
-    const category = req.query.category;
-    
+export const getAllProducts = async (req, res) => {
     try {
-        let products;
+        const products = await Products.findAll({
+            attributes: [
+                'id',
+                'uuid',
+                'name',
+                'category',
+                'image',
+                'price',
+                'description',
+                'stock',
+                'isHot_deal',
+                'shopee_link',
+                'tokopedia_link',
+                'count_view',
+                'shopee_click',
+                'tokopedia_click'
+            ],
+        });
 
-        if (category) {
-            products = await Products.findAll({
-                where: {
-                    category: category.replace(/%/g, ' ')
-                },
-                attributes: ['id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
-            });
-        } else {
-            products = await Products.findAll({
-                attributes: ['id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
-            });
-        }
         const response = products.map(product => ({
             ...product.toJSON(),
             image: product.image.split(',').map(path => path.replace(/\\/g, '\\'))
         }));
 
-        console.log(response); 
+        console.log(response);
         res.status(200).json(response);
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch products" });
     }
 }
 
-export const searchProduct = async (req, res) => {
-    const searchQuery = req.query.q.toLowerCase(); 
-    
-    try {
-        const products = await Products.findAll({
-            where: Sequelize.where(
-                Sequelize.fn('LOWER', Sequelize.col('name')),
-                'LIKE',
-                `%${searchQuery}%`
-            ),
-            attributes: ['id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
-        });
 
-        if (products.length === 0) {
+export const getProducts = async (req, res) => {
+    try {
+        // Check if a query string exists in the URL
+      const queryString = req.url.includes('?') ? req.url.split('?')[1] : '';
+
+      // Replace %20 with + in the query string
+      const modifiedQuery = queryString.replace(/%20/g, '+');
+
+      const queryObject = querystring.parse(modifiedQuery);
+
+      const {
+        page = 1,
+        limit = 10,
+        sortBy = 'name',
+        sortOrder = 'asc',
+        categories = [], 
+        search = '',
+        minPrice,
+        maxPrice,
+      } = queryObject;
+
+      const categoryOptions = [
+        'Alat Make Up',
+        'Box Kado',
+        'Figura',
+        'Alat Tulis',
+        'Pernak-pernik',
+        'Kertas Daur Ulang',
+      ];
+
+      const validatedPage = Math.max(1, parseInt(page));
+      const validatedLimit = Math.min(50, Math.max(1, parseInt(limit)));
+      const validatedCategories = categoryOptions.filter(option => categories.includes(option));
+      const validatedSortBy = ['name', 'price', 'date'].includes(sortBy)
+        ? sortBy
+        : 'name';
+      const validatedSortOrder = ['asc', 'desc'].includes(sortOrder)
+        ? sortOrder
+        : 'asc';
+
+      const order = [[validatedSortBy, validatedSortOrder]];
+
+      const where = {};
+
+      if (validatedCategories.length > 0) {
+        where.category = { [Sequelize.Op.in]: validatedCategories };
+      }
+
+      if (search) {
+        where.name = { [Sequelize.Op.like]: `%${search}%` };
+      }
+
+      if (minPrice !== undefined && maxPrice !== undefined) {
+        where.price = { [Sequelize.Op.between]: [minPrice, maxPrice] };
+      } else if (minPrice !== undefined) {
+        where.price = { [Sequelize.Op.gte]: minPrice };
+      } else if (maxPrice !== undefined) {
+        where.price = { [Sequelize.Op.lte]: maxPrice };
+      }
+
+      const products = await Products.findAndCountAll({
+        attributes: [
+          'id',
+          'uuid',
+          'name',
+          'category',
+          'image',
+          'price',
+          'description',
+          'stock',
+          'isHot_deal',
+          'shopee_link',
+          'tokopedia_link',
+          'count_view',
+          'shopee_click',
+          'tokopedia_click'
+        ],
+        where,
+        order,
+        limit: validatedLimit,
+        offset: (validatedPage - 1) * validatedLimit,
+      });
+
+      const totalPages = Math.ceil(products.count / validatedLimit);
+
+      const response = {
+        error: false,
+        totalProducts: products.count,
+        page: validatedPage,
+        limit: validatedLimit,
+        categories: categoryOptions,
+        products: products.rows.map(product => ({
+          ...product.toJSON(),
+          image: product.image.split(',').map(path => path.replace(/\\/g, '\\')),
+        })),
+        totalPages,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Failed to fetch products' });
+    }
+};
+
+export const getSingleProduct = async (req, res) => {
+    try {
+        const { productId, slug } = req.query;
+        let product;
+
+        if (productId) {
+            product = await Products.findOne({
+                where: {
+                    uuid: productId
+                },
+                attributes: [
+                    'id',
+                    'uuid',
+                    'name',
+                    'category',
+                    'image',
+                    'price',
+                    'description',
+                    'stock',
+                    'isHot_deal',
+                    'shopee_link',
+                    'tokopedia_link',
+                    'count_view',
+                    'shopee_click',
+                    'tokopedia_click'
+                ],
+            });
+        } else if (slug) {
+            const productName = slug.replace(/-/g, ' ');
+
+            product = await Products.findOne({
+                where: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('name')), productName.toLowerCase()),
+                attributes: [
+                    'id',
+                    'uuid',
+                    'name',
+                    'category',
+                    'image',
+                    'price',
+                    'description',
+                    'stock',
+                    'isHot_deal',
+                    'shopee_link',
+                    'tokopedia_link',
+                    'count_view',
+                    'shopee_click',
+                    'tokopedia_click'
+                ],
+            });
+
+            if (product) {
+                await product.increment('count_view');
+            }
+        }
+
+        if (!product) {
             return res.status(404).json({ msg: "Product not found" });
         }
 
-        const response = products.map(product => ({
+        const response = {
+            ...product.toJSON(),
+            image: product.image.split(',').map(path => path.replace(/\\/g, '\\'))
+        };
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to fetch product" });
+    }
+};
+
+export const getSimilarProduct = async (req, res) => {
+    const productId = req.query.productId;
+    try {
+        const originalProduct = await Products.findOne({
+            where: {
+                uuid: productId
+            },
+            attributes: ['category']
+        });
+
+        if (!originalProduct) {
+            return res.status(404).json({ msg: "Product not found" });
+        }
+
+        const similarProducts = await Products.findAll({
+            where: {
+                category: originalProduct.category,
+                uuid: {
+                    [Op.not]: productId
+                }
+            },
+            attributes: [
+                'id',
+                'uuid',
+                'name',
+                'category',
+                'image',
+                'price',
+                'description',
+                'stock',
+                'isHot_deal',
+                'shopee_link',
+                'tokopedia_link',
+                'count_view',
+                'shopee_click',
+                'tokopedia_click'
+            ],
+        });
+
+        const response = similarProducts.map(product => ({
             ...product.toJSON(),
             image: product.image.split(',').map(path => path.replace(/\\/g, '\\'))
         }));
 
         res.status(200).json(response);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Failed to perform the search" });
+        res.status(500).json({ error: "Failed to fetch similar products" });
     }
-};
-
-export const getProductById = async (req, res) => {
-    const productUuid = req.params.id;
-    try {
-        const product = await Products.findOne({
-            where: {
-                uuid: productUuid
-            },
-            attributes: ['id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
-        });
-
-        if (!product) {
-            return res.status(404).json({ msg: "Product not found" });
-        }
-
-        const response = {
-            ...product.toJSON(),
-            image: product.image.split(',').map(path => path.replace(/\\/g, '\\'))
-        };
-
-        res.status(200).json(response);
-    } catch (error) {
-        res.status(500).json({ error: "Failed to fetch product" });
-    }
-};
-
-
-export const getProductBySlug = async (req, res) => {
-    try {
-        const slug = req.params.slug;
-        const productName = slug.replace(/-/g, ' ');
-
-        const product = await Products.findOne({
-            where: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('name')), productName.toLowerCase()),
-            attributes: ['id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
-        });
-
-        if (!product) {
-            return res.status(404).json({ msg: "Product not found" });
-        }
-
-        await product.increment('count_view');
-
-        const response = {
-            ...product.toJSON(),
-            image: product.image.split(',').map(path => path.replace(/\\/g, '\\'))
-        };
-
-        console.log(response); 
-        res.status(200).json(response);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Failed to fetch product" });
-    }
-};
+}
 
 export const createProduct = async (req, res) => {
+    // console.log("Request Files:", req.files); // Log the contents of req.files
+    // console.log("Request Body:", req.body);
+
     if (req.fileValidationError) {
         return res.status(400).json({ msg: req.fileValidationError.message });
     }
 
     const {
         name, category, price, description, stock,
-        isHot_deal, shopee_link, tokopedia_link
+        shopee_link, tokopedia_link
     } = req.body;
 
     if (!req.files || req.files.length === 0) {
@@ -150,7 +301,7 @@ export const createProduct = async (req, res) => {
 
         const imageUrlString = uploadedImages.join(',');
 
-        await Products.create({
+        const newProduct = await Products.create({
             userId: req.userId,
             name,
             category,
@@ -158,7 +309,7 @@ export const createProduct = async (req, res) => {
             price,
             description,
             stock,
-            isHot_deal,
+            isHot_deal: false,
             shopee_link,
             tokopedia_link,
             count_view: 0,
@@ -166,7 +317,7 @@ export const createProduct = async (req, res) => {
             tokopedia_click: 0
         });
 
-        res.status(201).json({ msg: "Product Created Successfully" });
+        res.status(201).json({ msg: "Product Created Successfully", data: newProduct });
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: error.message });
@@ -174,17 +325,16 @@ export const createProduct = async (req, res) => {
 };
 
 export const updateProduct = async (req, res) => {
-    const productUuid = req.params.id;
+    const productId = req.query.productId;
 
     const {
-        name, category, price, description, stock,
-        isHot_deal, shopee_link, tokopedia_link
+        name, category, price, description, stock, shopee_link, tokopedia_link
     } = req.body;
 
     try {
         const product = await Products.findOne({
             where: {
-                uuid: productUuid
+                uuid: productId
             }
         });
 
@@ -223,24 +373,30 @@ export const updateProduct = async (req, res) => {
             price,
             description,
             stock,
-            isHot_deal,
             shopee_link,
             tokopedia_link
         });
 
-        res.status(200).json({ msg: "Product Updated Successfully" });
+        
+        const updatedProduct = await Products.findOne({
+            where: {
+                uuid: productId
+            }
+        });
+
+        res.status(200).json({ msg: "Product Updated Successfully", data: updatedProduct });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
 export const deleteProduct = async (req, res) => {
-    const productUuid = req.params.id;
+    const productId = req.query.productId;
 
     try {
         const product = await Products.findOne({
             where: {
-                uuid: productUuid
+                uuid: productId
             }
         });
 
@@ -259,48 +415,70 @@ export const deleteProduct = async (req, res) => {
             fs.unlinkSync(imagePath);
         });
 
+        const deletedProductName = product.name; // Get the name of the deleted product
         await product.destroy();
 
-        res.status(200).json({ msg: "Product Deleted Successfully" });
+        res.status(200).json({ msg: "Product Deleted Successfully", deletedProductId: productId, deletedProductName });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Failed to delete product" });
     }
 };
 
-export const getProductByPrice = async (req, res) => {
-    const { minPrice, maxPrice } = req.query;
-
+export const updateHotDeal = async (req, res) => {
+    const productId = req.query.productId;
+  
     try {
-        const products = await Products.findAll({
-            where: {
-                price: {
-                    [Op.between]: [minPrice, maxPrice]
-                }
-            },
-            attributes: ['id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
-        });
-
-        const response = products.map(product => ({
-            ...product.toJSON(),
-            image: product.image.split(',').map(path => path.replace(/\\/g, '\\'))
-        }));
-
-        res.status(200).json(response);
+      const product = await Products.findOne({
+        where: {
+          uuid: productId,
+        },
+      });
+  
+      if (!product) {
+        return res.status(404).json({ msg: 'Product not found' });
+      }
+  
+      await product.update({
+        isHot_deal: !product.isHot_deal,
+      });
+      res.status(200).json({
+        msg: 'Hot Deal status updated successfully',
+        product: {
+            uuid: product.uuid,
+            name: product.name,
+            isHot_deal: product.isHot_deal,
+        },
+      });
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch products by price range" });
+      console.error(error);
+      res.status(500).json({ error: 'Failed to toggle Hot Deal status' });
     }
-};
+  };
+  
+
 
 export const getBestSellerProducts = async (req, res) => {
     try {
         const bestSellerProducts = await Products.findAll({
             order: [[Sequelize.literal('shopee_click + tokopedia_click'), 'DESC']],
-            limit: 5,
+            limit: 10,
             attributes: [
-                'id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock',
-                'shopee_link', 'tokopedia_link', 'shopee_click', 'tokopedia_click'
-            ]
+                'id',
+                'uuid',
+                'name',
+                'category',
+                'image',
+                'price',
+                'description',
+                'stock',
+                'isHot_deal',
+                'shopee_link',
+                'tokopedia_link',
+                'count_view',
+                'shopee_click',
+                'tokopedia_click'
+            ],
         });
 
         const response = bestSellerProducts.map(product => ({
@@ -321,7 +499,22 @@ export const getHotDealProducts = async (req, res) => {
             where: {
                 isHot_deal: true
             },
-            attributes: ['id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'isHot_deal', 'shopee_link', 'tokopedia_link']
+            attributes: [
+                'id',
+                'uuid',
+                'name',
+                'category',
+                'image',
+                'price',
+                'description',
+                'stock',
+                'isHot_deal',
+                'shopee_link',
+                'tokopedia_link',
+                'count_view',
+                'shopee_click',
+                'tokopedia_click'
+            ],
         });
 
         if (!hotDealProducts || hotDealProducts.length === 0) {
@@ -343,8 +536,23 @@ export const getNewCollectionProducts = async (req, res) => {
     try {
         const newCollectionProducts = await Products.findAll({
             order: [['createdAt', 'DESC']],
-            limit: 5,
-            attributes: ['id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'shopee_link', 'tokopedia_link', 'createdAt', 'updatedAt']
+            limit: 10,
+            attributes: [
+                'id',
+                'uuid',
+                'name',
+                'category',
+                'image',
+                'price',
+                'description',
+                'stock',
+                'isHot_deal',
+                'shopee_link',
+                'tokopedia_link',
+                'count_view',
+                'shopee_click',
+                'tokopedia_click'
+            ],
         });
         if (!newCollectionProducts) {
             return res.status(404).json({ msg: "Product not found" });
@@ -365,11 +573,23 @@ export const getMostViewedProducts = async (req, res) => {
     try {
         const mostViewedProducts = await Products.findAll({
             order: [['count_view', 'DESC']],
-            limit: 5,
+            limit: 10,
             attributes: [
-                'id', 'uuid', 'name', 'category', 'image', 'price', 'description', 'stock', 'count_view',
-                'shopee_link', 'tokopedia_link'
-            ]
+                'id',
+                'uuid',
+                'name',
+                'category',
+                'image',
+                'price',
+                'description',
+                'stock',
+                'isHot_deal',
+                'shopee_link',
+                'tokopedia_link',
+                'count_view',
+                'shopee_click',
+                'tokopedia_click'
+            ],
         });
 
         const response = mostViewedProducts.map(product => ({
@@ -383,49 +603,86 @@ export const getMostViewedProducts = async (req, res) => {
     }
 };
 
-
 export const incrShopeeClick = async (req, res) => {
-    const productUuid = req.params.id;
-
+    const productId = req.params.productId;
+    const date = req.query.date; // Date in 'YYYY-MM-DD' format
+  
     try {
-        const product = await Products.findOne({
-            where: {
-                uuid: productUuid
-            }
-        });
-
-        if (!product) {
-            return res.status(404).json({ error: "Product not found" });
+      const product = await Products.findOne({
+        where: {
+          uuid: productId
         }
-
-        await product.increment("shopee_click");
-
-        res.status(200).json({ message: "Shopee click incremented" });
+      });
+  
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+  
+      await product.increment("shopee_click");
+  
+      // Update analytics data
+      let analyticsEntry = await ProductAnalytics.findOne({
+        where: {
+          date: date
+        }
+      });
+  
+      if (!analyticsEntry) {
+        analyticsEntry = await ProductAnalytics.create({
+          date: date,
+          dayNumber: (new Date(date).getDay() % 7) + 1,
+          shopee_click: 1,
+          tokopedia_click: 0
+        });
+      } else {
+        await analyticsEntry.increment("shopee_click");
+      }
+  
+      res.status(200).json({ message: "Shopee click and analytics updated" });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Failed to increment shopee click" });
+      console.error(error);
+      res.status(500).json({ error: "Failed to update shopee click and analytics" });
     }
 };
 
 export const incrTokopediaClick = async (req, res) => {
-    const productUuid = req.params.id;
-
+    const productId = req.params.productId;
+    const date = req.query.date; // Date in 'YYYY-MM-DD' format
+  
     try {
-        const product = await Products.findOne({
-            where: {
-                uuid: productUuid
-            }
-        });
-
-        if (!product) {
-            return res.status(404).json({ error: "Product not found" });
+      const product = await Products.findOne({
+        where: {
+          uuid: productId
         }
-
-        await product.increment("tokopedia_click");
-
-        res.status(200).json({ message: "Tokopedia click incremented" });
+      });
+  
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+  
+      await product.increment("tokopedia_click");
+  
+      // Update analytics data
+      let analyticsEntry = await ProductAnalytics.findOne({
+        where: {
+          date: date
+        }
+      });
+  
+      if (!analyticsEntry) {
+        analyticsEntry = await ProductAnalytics.create({
+          date: date,
+          dayNumber: (new Date(date).getDay() % 7) + 1,
+          shopee_click: 0, // Initialize with 0 click
+          tokopedia_click: 1
+        });
+      } else {
+        await analyticsEntry.increment("tokopedia_click");
+      }
+  
+      res.status(200).json({ message: "Tokopedia click and analytics updated" });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Failed to increment tokopedia click" });
+      console.error(error);
+      res.status(500).json({ error: "Failed to update tokopedia click and analytics" });
     }
 };
