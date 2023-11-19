@@ -25,7 +25,7 @@ router.get("/api/products", getProducts);
 router.get("/api/products/all", getAllProducts);
 router.get("/api/products/info", getSingleProduct);
 router.get("/api/products/similar-product", getSimilarProduct);
-router.post("/api/products", VerifyUser, upload.array('images', 10), createProduct);
+router.post("/api/products", upload.array('images', 10), createProduct);
 router.patch("/api/products", VerifyUser, upload.array('images', 10), updateProduct);
 router.delete("/api/products", VerifyUser, deleteProduct);
 router.patch("/api/products/edit-hot-deal", VerifyUser, updateHotDeal);

@@ -302,7 +302,7 @@ export const createProduct = async (req, res) => {
         const imageUrlString = uploadedImages.join(',');
 
         const newProduct = await Products.create({
-            userId: req.userId,
+            userId: 1,
             name,
             category,
             image: imageUrlString,
@@ -317,7 +317,7 @@ export const createProduct = async (req, res) => {
             tokopedia_click: 0
         });
 
-        res.status(201).json({ msg: "Product Created Successfully", data: newProduct });
+        res.status(200).json({ msg: "Product Created Successfully", data: newProduct });
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: error.message });
